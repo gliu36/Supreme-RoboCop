@@ -4,10 +4,45 @@ from selenium.webdriver.support.ui import Select
 import re
 import json
 import time
+import threading
 
-def findItem(keywords, color, category):
-    path = r"C:\Users\gerry\Documents\SUPREME\python\chromedriver.exe"
-    driver = webdriver.Chrome(path)
+
+def countdown(driver, category, delay):
+    driver.get("https://accounts.google.com/signin/v2/identifier?service=youtube&hl=en&uilel=0&continue=http%3A%2F%2Fwww.youtube.com%2Fsignin%3Fhl%3Den%26next%3D%252F%26app%3Ddesktop%26action_handle_signin%3Dtrue&passive=false&flowName=GlifWebSignIn&flowEntry=AddSession")
+    driver.execute_script("""
+        document.onkeydown = function(event) {
+            var key_press = String.fromCharCode(event.keyCode);
+            console.log(key_press);
+            if (key_press === "P") {
+                window.location.href = "http://www.supremenewyork.com/shop/all/""" + category + """";
+            }
+        }
+    """)
+    event = threading.Event()
+    t1 = threading.Thread(target= start(event, category))
+
+def start(event, category):
+    event.set()
+    event.wait()
+    while event.is_set():
+        driver.execute_script("""
+                document.onkeydown = function(event) {
+                    var key_press = String.fromCharCode(event.keyCode);
+                    console.log(key_press);
+                    if (key_press === "P") {
+                        window.location.href = "http://www.supremenewyork.com/shop/all/""" + category + """";
+                    }
+                }
+            """)
+        x = driver.current_url
+        print(x)
+        time.sleep(1)
+        if x == "http://www.supremenewyork.com/shop/all/" + category:
+            print("clear")
+            event.clear()
+
+
+def findItem(keywords, color, category, driver):
     driver.get("http://www.supremenewyork.com/shop/all/" + category)
     items_element = driver.find_elements_by_class_name("name-link")
     items = [x.text for x in items_element]
@@ -40,7 +75,7 @@ def findItem(keywords, color, category):
                 matched_item = catalog[key]
                 break
 
-    return [driver, matched_item]
+    return matched_item
 
 def addToCart(size, driver):
     sizes = driver.find_elements_by_id("s")
@@ -80,6 +115,7 @@ def autoFill(driver, profile, delay):
     time.sleep(delay)
     driver.find_element_by_xpath("""//*[@id="pay"]/input""").click()
 
+
 keywords = ["Striped"]
 color = "Brown"
 size = "Large"
@@ -100,15 +136,18 @@ profile = {
     "cvv":"237"
 }
 addToCartDelay = 0.25
-checkoutDelay = 2
+checkoutDelay = 0.14
+delay = "11:00 AM"
 
-results = findItem(keywords, color, category)
+path = r"/Users/gliu2/Desktop/PythonStuff/webscrape/venv/chromedriver"
+driver = webdriver.Chrome(path)
 
-item = results[1]
-driver = results[0]
 
+countdown(driver, category, delay)
+
+
+item = findItem(keywords, color, category, driver)
 print(json.dumps(item, indent=4))
-
 driver.get(item["link"])
 addToCart(size, driver)
 time.sleep(addToCartDelay)
